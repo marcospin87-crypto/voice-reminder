@@ -4,12 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>MemoVocale</title>
-  <link rel="manifest" href="./manifest.json">
+  <link rel="manifest" href="./manifest.webmanifest">
   <meta name="theme-color" content="#0d1117">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="MemoVocale">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='100' fill='%230d1117'/%3E%3Cpath d='M256 130a55 55 0 0 0-55 55v75a55 55 0 0 0 110 0v-75a55 55 0 0 0-55-55z' fill='%2300f2fe'/%3E%3C/svg%3E">
 
   <style>
     :root {
@@ -400,19 +400,14 @@
   </div>
 
   <script>
-    // Registrazione Service Worker
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js', { scope: './' })
-          .then(reg => {
-            reg.update();
-            console.log('SW registrato su:', reg.scope);
-          })
-          .catch(err => console.error('Errore SW:', err));
+          .then(reg => reg.update())
+          .catch(err => console.error('SW Error:', err));
       });
     }
 
-    // Gestione Installazione PWA
     let deferredPrompt = null;
     const btnInstall = document.getElementById('btnInstall');
 
@@ -437,7 +432,6 @@
       deferredPrompt = null;
     });
 
-    // Database Locale
     let reminders = [];
     try {
       reminders = JSON.parse(localStorage.getItem('memovocale_db')) || [];
@@ -450,7 +444,6 @@
       renderReminders();
     }
 
-    // Parser Naturale Italiano
     function parseItalianVoiceInput(text) {
       let cleaned = text.trim();
       let preAlertMinutes = 0;
@@ -524,7 +517,6 @@
       };
     }
 
-    // Registrazione Vocale
     const btnMic = document.getElementById('btnMic');
     const voiceStatus = document.getElementById('voiceStatus');
     const voiceTranscript = document.getElementById('voiceTranscript');
@@ -562,7 +554,7 @@
         stopRecording();
       };
     } else {
-      voiceStatus.innerText = "Dettatura vocale non attiva nel browser";
+      voiceStatus.innerText = "Dettatura non attiva";
       btnMic.style.opacity = '0.5';
     }
 
@@ -655,7 +647,6 @@
       document.getElementById('manualTime').value = '';
     });
 
-    // Audio Allarmi
     let audioCtx = null;
     let alarmInterval = null;
 
@@ -778,12 +769,11 @@
           navigator.serviceWorker.ready.then(reg => {
             reg.showNotification(title, {
               body: body,
-              icon: './icon-192.png',
               vibrate: [200, 100, 200]
             });
           });
         } else {
-          new Notification(title, { body: body, icon: './icon-192.png' });
+          new Notification(title, { body: body });
         }
       }
     }
