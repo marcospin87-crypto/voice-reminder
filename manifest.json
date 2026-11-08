@@ -1,9 +1,9 @@
 {
-  "id": "voice-reminder-pwa-v2",
-  "name": "Voice Reminder",
-  "short_name": "Reminder",
+  "id": "v-reminder-app-v3",
+  "name": "V-Reminder",
+  "short_name": "V-Reminder",
   "description": "Promemoria vocale rapido offline con preavvisi",
-  "start_url": "./index.html",
+  "start_url": "./index.html?v=3",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait-primary",
