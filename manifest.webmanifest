@@ -1,0 +1,18 @@
+{
+  "id": "/memo-vocale-standalone/",
+  "name": "MemoVocale",
+  "short_name": "Memo",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0d1117",
+  "theme_color": "#0d1117",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='100' fill='%230d1117'/%3E%3Ccircle cx='256' cy='256' r='180' fill='none' stroke='%2300f2fe' stroke-width='16' opacity='0.3'/%3E%3Cpath d='M256 130a55 55 0 0 0-55 55v75a55 55 0 0 0 110 0v-75a55 55 0 0 0-55-55z' fill='%2300f2fe'/%3E%3Cpath d='M350 230v30c0 52-42 94-94 94s-94-42-94-94v-30h-20v30c0 60 46 110 104 115v45h-40v20h100v-20h-40v-45c58-5 104-55 104-115v-30h-20z' fill='%2300f2fe'/%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
