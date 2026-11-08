@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Voice Reminder</title>
+  <link rel="manifest" href="./manifest.json">
+  <meta name="theme-color" content="#0d1117">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Reminder">
+  <link rel="icon" type="image/svg+xml" href="./icon.svg">
+  <link rel="apple-touch-icon" href="./icon.svg">
+
+  <style>
+    :root {
+      --bg: #0d1117;
+      --card-bg: #161b22;
+      --border: #30363d;
+      --accent: #00f2fe;
+      --accent-glow: rgba(0, 242, 254, 0.35);
+      --amber: #f59e0b;
+      --red: #ef4444;
+      --text: #f0f6fc;
+      --text-muted: #8b949e;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
+    body { background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
+
+    header {
+      padding: 16px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      background: rgba(13, 17, 23, 0.95);
+      position: sticky; top: 0; z-index: 50;
+      backdrop-filter: blur(10px);
+    }
+    .brand { font-size: 1.15rem; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+    .brand span { color: var(--accent); }
+    
+    .actions { display: flex; gap: 8px; }
+    .btn-icon {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    .btn-install {
+      background: var(--accent);
+      color: #000;
+      font-weight: 700;
+      border: none;
+      display: none;
+    }
+
+    main { flex: 1; max-width: 640px; width: 100%; margin: 0 auto; padding: 20px 16px 120px 16px; }
+
+    .voice-dock {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 24px 20px;
+      text-align: center;
+      margin-bottom: 24px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    }
+    .mic-button {
+      width: 90px; height: 90px;
+      border-radius: 50%;
+      border: none;
+      background: linear-gradient(135deg, #00f2fe, #4facfe);
+      color: #000;
+      cursor: pointer;
+      display: inline-flex; justify-content: center; align-items: center;
+      box-shadow: 0 0 24px var(--accent-glow);
+      transition: transform 0.15s ease;
+    }
+    .mic-button:active { transform: scale(0.95); }
+    .mic-button.recording {
+      background: var(--red);
+      color: #fff;
+      animation: pulse 1.2s infinite;
+      box-shadow: 0 0 30px rgba(239, 68, 68, 0.7);
+    }
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.08); }
+      100% { transform: scale(1); }
+    }
+    .mic-icon { width: 38px; height: 38px; fill: currentColor; }
+
+    .voice-status { margin-top: 14px; font-size: 1rem; font-weight: 600; }
+    .voice-transcript {
+      margin-top: 10px; font-size: 0.9rem; color: var(--accent);
+      min-height: 22px; font-style: italic;
+    }
+
+    details.manual-input {
+      margin-top: 16px;
+      text-align: left;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+    details.manual-input summary { cursor: pointer; user-select: none; }
+    .manual-form {
+      margin-top: 12px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .manual-form input, .manual-form select {
+      background: #0d1117;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+    }
+    .btn-submit {
+      background: #238636;
+      color: #fff;
+      border: none;
+      padding: 10px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .section-title {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+      display: flex; justify-content: space-between;
+    }
+    .reminder-list { display: flex; flex-direction: column; gap: 10px; }
+    .reminder-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 16px;
+      display: flex; justify-content: space-between; align-items: flex-start;
+      gap: 12px;
+    }
+    .reminder-info { flex: 1; }
+    .reminder-title { font-size: 1rem; font-weight: 600; margin-bottom: 6px; word-break: break-word; }
+    .reminder-meta { font-size: 0.8rem; color: var(--text-muted); display: flex; flex-wrap: wrap; gap: 8px; }
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .badge-time { background: rgba(0, 242, 254, 0.15); color: var(--accent); }
+    .badge-prealert { background: rgba(245, 158, 11, 0.15); color: var(--amber); }
+
+    .btn-action-del {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 1.1rem;
+      padding: 4px 8px;
+    }
+    .btn-action-del:hover { color: var(--red); }
+
+    .alarm-modal {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.85);
+      z-index: 100;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      text-align: center;
+    }
+    .alarm-modal.active { display: flex; }
+    .alarm-box {
+      background: var(--card-bg);
+      border: 2px solid var(--accent);
+      border-radius: 20px;
+      padding: 24px;
+      max-width: 360px;
+      width: 100%;
+      box-shadow: 0 0 40px var(--accent-glow);
+    }
+    .alarm-box.pre-alert {
+      border-color: var(--amber);
+      box-shadow: 0 0 40px rgba(245, 158, 11, 0.4);
+    }
+    .alarm-btns {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    .alarm-btns button {
+      padding: 12px;
+      border-radius: 10px;
+      border: none;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .btn-stop { background: var(--accent); color: #000; }
+    .btn-snooze { background: #30363d; color: #fff; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.5"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+      Voice <span>Reminder</span>
+    </div>
+    <div class="actions">
+      <button id="btnInstall" class="btn-icon btn-install">Installa App</button>
+      <button id="btnNotify" class="btn-icon" title="Abilita Notifiche">🔔</button>
+      <button id="btnExport" class="btn-icon" title="Backup JSON">💾</button>
+    </div>
+  </header>
+
+  <main>
+    <div class="voice-dock">
+      <button id="btnMic" class="mic-button" aria-label="Registra vocale">
+        <svg class="mic-icon" viewBox="0 0 24 24"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/></svg>
+      </button>
+      <div id="voiceStatus" class="voice-status">Tocca per registrare</div>
+      <div id="voiceTranscript" class="voice-transcript"></div>
+
+      <details class="manual-input">
+        <summary>Oppure inserisci manualmente</summary>
+        <div class="manual-form">
+          <input type="text" id="manualText" placeholder="Cosa devi fare?">
+          <input type="datetime-local" id="manualTime">
+          <select id="manualPreAlert">
+            <option value="0">Nessun preavviso</option>
+            <option value="5">5 minuti prima</option>
+            <option value="10">10 minuti prima</option>
+            <option value="15">15 minuti prima</option>
+            <option value="30">30 minuti prima</option>
+            <option value="60">1 ora prima</option>
+          </select>
+          <button id="btnManualAdd" class="btn-submit">Salva Promemoria</button>
+        </div>
+      </details>
+    </div>
+
+    <div class="section-title">
+      <span>I tuoi promemoria</span>
+      <span id="remindersCount">0</span>
+    </div>
+    <div id="remindersList" class="reminder-list"></div>
+  </main>
+
+  <div id="alarmModal" class="alarm-modal">
+    <div id="alarmBox" class="alarm-box">
+      <div id="alarmBadge" class="badge badge-time" style="margin-bottom:8px;">SCADENZA</div>
+      <h2 id="alarmTitle" style="margin-bottom: 8px;">Titolo</h2>
+      <p id="alarmTimeText" style="font-size:0.9rem; color:var(--text-muted);"></p>
+      <div class="alarm-btns">
+        <button id="btnAlarmDone" class="btn-stop">FATTO</button>
+        <button id="btnAlarmSnooze" class="btn-snooze">+10 MIN</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 1. REGISTRAZIONE SERVICE WORKER
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js', { scope: './' })
+          .then(reg => console.log('SW registrato su:', reg.scope))
+          .catch(err => console.error('Errore SW:', err));
+      });
+    }
+
+    // 2. LOGICA INSTALLAZIONE CHROME PWA
+    let deferredPrompt = null;
+    const btnInstall = document.getElementById('btnInstall');
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      btnInstall.style.display = 'inline-flex';
+    });
+
+    btnInstall.addEventListener('click', async () => {
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        btnInstall.style.display = 'none';
+      }
+      deferredPrompt = null;
+    });
+
+    window.addEventListener('appinstalled', () => {
+      btnInstall.style.display = 'none';
+      deferredPrompt = null;
+    });
+
+    // 3. STATO E PERSISTENZA LOCALSTORAGE
+    let reminders = [];
+    try {
+      reminders = JSON.parse(localStorage.getItem('voice_reminders_pwa')) || [];
+    } catch(e) {
+      reminders = [];
+    }
+
+    function saveReminders() {
+      localStorage.setItem('voice_reminders_pwa', JSON.stringify(reminders));
+      renderReminders();
+    }
+
+    // 4. PARSER NATURALE ITALIANO CON PREAVVISI
+    function parseItalianVoiceInput(text) {
+      let cleaned = text.trim();
+      let preAlertMinutes = 0;
+
+      const preRegex = /(?:avvisami|notificami|avvertimi)?\s*(\d+|mezz'ora|un'ora|un quarto d'ora)\s*(minuti|minuto|ora|ore)?\s*prima/i;
+      const preMatch = cleaned.match(preRegex);
+      if (preMatch) {
+        const val = preMatch[1].toLowerCase();
+        if (val === "mezz'ora") preAlertMinutes = 30;
+        else if (val === "un'ora") preAlertMinutes = 60;
+        else if (val === "un quarto d'ora") preAlertMinutes = 15;
+        else {
+          const num = parseInt(val, 10);
+          if (preMatch[2] && preMatch[2].startsWith('or')) preAlertMinutes = num * 60;
+          else preAlertMinutes = num;
+        }
+        cleaned = cleaned.replace(preMatch[0], ' ');
+      }
+
+      cleaned = cleaned.replace(/^(ricordami\s*(di|che)?|promemoria\s*(per)?|segna\s*(che)?|imposta\s*(un)?\s*promemoria)/i, ' ').trim();
+
+      let targetDate = new Date();
+      let timeFound = false;
+
+      const relMatch = cleaned.match(/tra\s+(\d+)\s+(minuti|minuto|ore|ora)/i);
+      if (relMatch) {
+        timeFound = true;
+        const val = parseInt(relMatch[1], 10);
+        if (relMatch[2].startsWith('ora') || relMatch[2].startsWith('ore')) {
+          targetDate.setMinutes(targetDate.getMinutes() + val * 60);
+        } else {
+          targetDate.setMinutes(targetDate.getMinutes() + val);
+        }
+        cleaned = cleaned.replace(relMatch[0], ' ');
+      }
+
+      if (/dopodomani/i.test(cleaned)) {
+        targetDate.setDate(targetDate.getDate() + 2);
+        cleaned = cleaned.replace(/dopodomani/i, ' ');
+      } else if (/domani/i.test(cleaned)) {
+        targetDate.setDate(targetDate.getDate() + 1);
+        cleaned = cleaned.replace(/domani/i, ' ');
+      }
+
+      const timeMatch = cleaned.match(/alle\s+(\d{1,2})(?:[:.](\d{2})|\s+e\s+(\d{1,2}|mezza|un quarto))?/i);
+      if (timeMatch) {
+        timeFound = true;
+        let hours = parseInt(timeMatch[1], 10);
+        let mins = 0;
+        if (timeMatch[2]) mins = parseInt(timeMatch[2], 10);
+        else if (timeMatch[3]) {
+          if (timeMatch[3] === 'mezza') mins = 30;
+          else if (timeMatch[3] === 'un quarto') mins = 15;
+          else mins = parseInt(timeMatch[3], 10);
+        }
+        targetDate.setHours(hours, mins, 0, 0);
+        cleaned = cleaned.replace(timeMatch[0], ' ');
+      }
+
+      if (!timeFound) {
+        targetDate.setHours(targetDate.getHours() + 1);
+      }
+
+      cleaned = cleaned.replace(/\s+/g, ' ').trim();
+      if (!cleaned) cleaned = "Promemoria";
+
+      return {
+        title: cleaned.charAt(0).toUpperCase() + cleaned.slice(1),
+        targetTimestamp: targetDate.getTime(),
+        preAlertMinutes: preAlertMinutes
+      };
+    }
+
+    // 5. GESTIONE SPEECH RECOGNITION
+    const btnMic = document.getElementById('btnMic');
+    const voiceStatus = document.getElementById('voiceStatus');
+    const voiceTranscript = document.getElementById('voiceTranscript');
+    let recognition = null;
+    let isRecording = false;
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (SpeechRecognition) {
+      recognition = new SpeechRecognition();
+      recognition.lang = 'it-IT';
+      recognition.continuous = false;
+      recognition.interimResults = false;
+
+      recognition.onstart = () => {
+        isRecording = true;
+        btnMic.classList.add('recording');
+        voiceStatus.innerText = "Ascolto in corso...";
+        voiceTranscript.innerText = "";
+      };
+
+      recognition.onresult = (e) => {
+        const transcript = e.results[0][0].transcript;
+        voiceTranscript.innerText = `"${transcript}"`;
+        const parsed = parseItalianVoiceInput(transcript);
+        addReminder(parsed.title, parsed.targetTimestamp, parsed.preAlertMinutes);
+      };
+
+      recognition.onerror = (e) => {
+        voiceStatus.innerText = "Errore microfono: " + e.error;
+        stopRecording();
+      };
+
+      recognition.onend = () => {
+        stopRecording();
+      };
+    } else {
+      voiceStatus.innerText = "Dettatura non supportata nel browser";
+      btnMic.style.opacity = '0.5';
+    }
+
+    function stopRecording() {
+      isRecording = false;
+      btnMic.classList.remove('recording');
+      voiceStatus.innerText = "Tocca per registrare";
+    }
+
+    btnMic.addEventListener('click', () => {
+      if (!recognition) return;
+      if (isRecording) {
+        recognition.stop();
+      } else {
+        unlockAudio();
+        recognition.start();
+      }
+    });
+
+    // 6. CREAZIONE & GESTIONE LISTA
+    function addReminder(title, targetTimestamp, preAlertMinutes = 0) {
+      const item = {
+        id: 'rem_' + Date.now(),
+        title: title,
+        timestamp: targetTimestamp,
+        preAlertMinutes: preAlertMinutes,
+        preAlertFired: false,
+        completed: false
+      };
+      reminders.push(item);
+      saveReminders();
+    }
+
+    function renderReminders() {
+      const container = document.getElementById('remindersList');
+      const countEl = document.getElementById('remindersCount');
+      container.innerHTML = '';
+
+      const active = reminders.filter(r => !r.completed).sort((a,b) => a.timestamp - b.timestamp);
+      countEl.innerText = active.length;
+
+      if (active.length === 0) {
+        container.innerHTML = '<div style="color:var(--text-muted); text-align:center; padding:30px 0;">Nessun promemoria attivo</div>';
+        return;
+      }
+
+      active.forEach(r => {
+        const card = document.createElement('div');
+        card.className = 'reminder-card';
+        const d = new Date(r.timestamp);
+        const formattedDate = d.toLocaleString('it-IT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+
+        let badges = `<span class="badge badge-time">⏰ ${formattedDate}</span>`;
+        if (r.preAlertMinutes > 0) {
+          badges += `<span class="badge badge-prealert">⏳ Preavviso: -${r.preAlertMinutes}m</span>`;
+        }
+
+        card.innerHTML = `
+          <div class="reminder-info">
+            <div class="reminder-title">${escapeHtml(r.title)}</div>
+            <div class="reminder-meta">${badges}</div>
+          </div>
+          <button class="btn-action-del" title="Elimina" onclick="deleteReminder('${r.id}')">✕</button>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    window.deleteReminder = function(id) {
+      reminders = reminders.filter(r => r.id !== id);
+      saveReminders();
+    };
+
+    function escapeHtml(str) {
+      return str.replace(/[&<>"']/g, m => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;' })[m]);
+    }
+
+    // 7. INPUT MANUALE
+    document.getElementById('btnManualAdd').addEventListener('click', () => {
+      const title = document.getElementById('manualText').value.trim();
+      const timeVal = document.getElementById('manualTime').value;
+      const preAlert = parseInt(document.getElementById('manualPreAlert').value, 10);
+
+      if (!title || !timeVal) {
+        alert("Inserisci titolo e data/ora.");
+        return;
+      }
+
+      const targetTimestamp = new Date(timeVal).getTime();
+      addReminder(title, targetTimestamp, preAlert);
+      document.getElementById('manualText').value = '';
+      document.getElementById('manualTime').value = '';
+    });
+
+    // 8. AUDIO SVEGLIA E NOTIFICHE
+    let audioCtx = null;
+    let alarmInterval = null;
+
+    function unlockAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    function playBeep(freq = 880, duration = 0.2) {
+      try {
+        unlockAudio();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch(e) {}
+    }
+
+    function startAlarmSound() {
+      playBeep(880, 0.3);
+      if (alarmInterval) clearInterval(alarmInterval);
+      alarmInterval = setInterval(() => {
+        playBeep(880, 0.2);
+        setTimeout(() => playBeep(1100, 0.2), 250);
+        if ('vibrate' in navigator) navigator.vibrate([200, 100, 200]);
+      }, 1000);
+    }
+
+    function stopAlarmSound() {
+      if (alarmInterval) {
+        clearInterval(alarmInterval);
+        alarmInterval = null;
+      }
+    }
+
+    // 9. CONTROLLO PERIODICO & ALLARMI
+    let currentAlarmReminder = null;
+    const alarmModal = document.getElementById('alarmModal');
+    const alarmBox = document.getElementById('alarmBox');
+    const alarmBadge = document.getElementById('alarmBadge');
+    const alarmTitle = document.getElementById('alarmTitle');
+    const alarmTimeText = document.getElementById('alarmTimeText');
+
+    function checkReminders() {
+      const now = Date.now();
+
+      reminders.forEach(r => {
+        if (r.completed) return;
+
+        if (r.preAlertMinutes > 0 && !r.preAlertFired) {
+          const preAlertTime = r.timestamp - (r.preAlertMinutes * 60 * 1000);
+          if (now >= preAlertTime && now < r.timestamp) {
+            r.preAlertFired = true;
+            saveReminders();
+            triggerPreAlert(r);
+          }
+        }
+
+        if (now >= r.timestamp) {
+          r.completed = true;
+          saveReminders();
+          triggerMainAlarm(r);
+        }
+      });
+    }
+
+    function triggerPreAlert(reminder) {
+      playBeep(659, 0.4);
+      sendNativeNotification(`⏳ Preavviso: ${reminder.title}`, `Scade tra ${reminder.preAlertMinutes} minuti!`);
+      showModal(reminder, true);
+    }
+
+    function triggerMainAlarm(reminder) {
+      currentAlarmReminder = reminder;
+      startAlarmSound();
+      sendNativeNotification(`⏰ SVEGLIA: ${reminder.title}`, 'Il promemoria è scaduto ora!');
+      showModal(reminder, false);
+    }
+
+    function showModal(reminder, isPreAlert) {
+      alarmTitle.innerText = reminder.title;
+      if (isPreAlert) {
+        alarmBox.classList.add('pre-alert');
+        alarmBadge.innerText = `PREAVVISO (-${reminder.preAlertMinutes} MIN)`;
+        alarmTimeText.innerText = "L'evento inizierà a breve.";
+      } else {
+        alarmBox.classList.remove('pre-alert');
+        alarmBadge.innerText = "SCADENZA";
+        alarmTimeText.innerText = "Orario raggiunto.";
+      }
+      alarmModal.classList.add('active');
+    }
+
+    document.getElementById('btnAlarmDone').addEventListener('click', () => {
+      stopAlarmSound();
+      alarmModal.classList.remove('active');
+      currentAlarmReminder = null;
+    });
+
+    document.getElementById('btnAlarmSnooze').addEventListener('click', () => {
+      stopAlarmSound();
+      alarmModal.classList.remove('active');
+      if (currentAlarmReminder) {
+        addReminder(currentAlarmReminder.title + " (Posticipato)", Date.now() + 10 * 60 * 1000, 0);
+      }
+      currentAlarmReminder = null;
+    });
+
+    function sendNativeNotification(title, body) {
+      if ('Notification' in window && Notification.permission === 'granted') {
+        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+          navigator.serviceWorker.ready.then(reg => {
+            reg.showNotification(title, {
+              body: body,
+              icon: './icon.svg',
+              vibrate: [200, 100, 200]
+            });
+          });
+        } else {
+          new Notification(title, { body: body, icon: './icon.svg' });
+        }
+      }
+    }
+
+    document.getElementById('btnNotify').addEventListener('click', () => {
+      if ('Notification' in window) {
+        Notification.requestPermission().then(perm => {
+          if (perm === 'granted') alert("Notifiche abilitate con successo!");
+        });
+      }
+    });
+
+    document.getElementById('btnExport').addEventListener('click', () => {
+      const blob = new Blob([JSON.stringify(reminders, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `voice_reminders_backup_${Date.now()}.json`;
+      a.click();
+    });
+
+    setInterval(checkReminders, 1000);
+    renderReminders();
+  </script>
+</body>
+</html>
