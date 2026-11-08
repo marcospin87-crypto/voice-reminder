@@ -1,9 +1,8 @@
-const CACHE_NAME = 'voice-reminder-v2';
+const CACHE_NAME = 'voice-reminder-v3';
 const ASSETS = [
   './',
   './index.html',
-  './manifest.json',
-  './icon.svg'
+  './manifest.json'
 ];
 
 self.addEventListener('install', (event) => {
