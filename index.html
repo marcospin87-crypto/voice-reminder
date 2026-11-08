@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>V-Reminder</title>
-  <link rel="manifest" href="./manifest.json?v=3">
+  <title>MemoVocale</title>
+  <link rel="manifest" href="./manifest.json">
   <meta name="theme-color" content="#0d1117">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="V-Reminder">
+  <meta name="apple-mobile-web-app-title" content="MemoVocale">
 
   <style>
     :root {
@@ -343,7 +343,7 @@
         <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
         <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
       </svg>
-      V-<span>Reminder</span>
+      Memo<span>Vocale</span>
     </div>
     <div class="actions">
       <button id="btnInstall" class="btn-icon btn-install">Installa App</button>
@@ -400,16 +400,19 @@
   </div>
 
   <script>
-    // 1. REGISTRAZIONE SERVICE WORKER
+    // Registrazione Service Worker
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js?v=3', { scope: './' })
-          .then(reg => console.log('SW registrato su:', reg.scope))
+        navigator.serviceWorker.register('./sw.js', { scope: './' })
+          .then(reg => {
+            reg.update();
+            console.log('SW registrato su:', reg.scope);
+          })
           .catch(err => console.error('Errore SW:', err));
       });
     }
 
-    // 2. LOGICA INSTALLAZIONE CHROME PWA
+    // Gestione Installazione PWA
     let deferredPrompt = null;
     const btnInstall = document.getElementById('btnInstall');
 
@@ -434,20 +437,20 @@
       deferredPrompt = null;
     });
 
-    // 3. STATO E PERSISTENZA LOCALSTORAGE
+    // Database Locale
     let reminders = [];
     try {
-      reminders = JSON.parse(localStorage.getItem('voice_reminders_pwa')) || [];
+      reminders = JSON.parse(localStorage.getItem('memovocale_db')) || [];
     } catch (e) {
       reminders = [];
     }
 
     function saveReminders() {
-      localStorage.setItem('voice_reminders_pwa', JSON.stringify(reminders));
+      localStorage.setItem('memovocale_db', JSON.stringify(reminders));
       renderReminders();
     }
 
-    // 4. PARSER NATURALE ITALIANO CON PREAVVISI
+    // Parser Naturale Italiano
     function parseItalianVoiceInput(text) {
       let cleaned = text.trim();
       let preAlertMinutes = 0;
@@ -521,7 +524,7 @@
       };
     }
 
-    // 5. GESTIONE SPEECH RECOGNITION
+    // Registrazione Vocale
     const btnMic = document.getElementById('btnMic');
     const voiceStatus = document.getElementById('voiceStatus');
     const voiceTranscript = document.getElementById('voiceTranscript');
@@ -559,7 +562,7 @@
         stopRecording();
       };
     } else {
-      voiceStatus.innerText = "Dettatura non supportata nel browser";
+      voiceStatus.innerText = "Dettatura vocale non attiva nel browser";
       btnMic.style.opacity = '0.5';
     }
 
@@ -579,7 +582,6 @@
       }
     });
 
-    // 6. CREAZIONE & GESTIONE LISTA
     function addReminder(title, targetTimestamp, preAlertMinutes = 0) {
       const item = {
         id: 'rem_' + Date.now(),
@@ -637,7 +639,6 @@
       return str.replace(/[&<>"']/g, m => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;' })[m]);
     }
 
-    // 7. INPUT MANUALE
     document.getElementById('btnManualAdd').addEventListener('click', () => {
       const title = document.getElementById('manualText').value.trim();
       const timeVal = document.getElementById('manualTime').value;
@@ -654,7 +655,7 @@
       document.getElementById('manualTime').value = '';
     });
 
-    // 8. AUDIO SVEGLIA E NOTIFICHE
+    // Audio Allarmi
     let audioCtx = null;
     let alarmInterval = null;
 
@@ -699,7 +700,6 @@
       }
     }
 
-    // 9. CONTROLLO PERIODICO & ALLARMI
     let currentAlarmReminder = null;
     const alarmModal = document.getElementById('alarmModal');
     const alarmBox = document.getElementById('alarmBox');
@@ -778,15 +778,12 @@
           navigator.serviceWorker.ready.then(reg => {
             reg.showNotification(title, {
               body: body,
-              icon: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAIAAAAb/IgRAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAABTSURBVHhe7cExAQAAAMKg9U9tDQ8gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgIsBcVEAAX4TfD0AAAAASUVORK5CYII=',
+              icon: './icon-192.png',
               vibrate: [200, 100, 200]
             });
           });
         } else {
-          new Notification(title, {
-            body: body,
-            icon: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAIAAAAb/IgRAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAABTSURBVHhe7cExAQAAAMKg9U9tDQ8gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgIsBcVEAAX4TfD0AAAAASUVORK5CYII='
-          });
+          new Notification(title, { body: body, icon: './icon-192.png' });
         }
       }
     }
@@ -804,7 +801,7 @@
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `voice_reminders_backup_${Date.now()}.json`;
+      a.download = `memovocale_backup_${Date.now()}.json`;
       a.click();
     });
 
